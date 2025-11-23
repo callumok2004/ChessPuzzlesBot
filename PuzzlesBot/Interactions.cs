@@ -4,6 +4,8 @@ using Discord.WebSocket;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using MongoDB.Driver;
+
 namespace PuzzlesBot;
 
 public class InteractionHandler {
@@ -43,5 +45,21 @@ public class InteractionHandler {
 		};
 
 		await context.Interaction.RespondAsync(embed: enbed.Build());
+	}
+}
+
+public class InteractionsBase(IServiceProvider services) : InteractionModuleBase {
+	public readonly IMongoClient mongoClient = services.GetRequiredService<IMongoClient>();
+	public readonly InteractionService interactions = services.GetRequiredService<InteractionService>();
+}
+
+public partial class Interactions(IServiceProvider services) : InteractionsBase(services) { }
+
+
+// test
+public partial class Interactions {
+	[SlashCommand("ping", "Replies with Pong!")]
+	public async Task PingAsync() {
+		await RespondAsync("Pong!");
 	}
 }

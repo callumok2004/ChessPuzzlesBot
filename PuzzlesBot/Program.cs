@@ -1,8 +1,14 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using MongoDB.Driver;
+
+using Serilog;
+using Serilog.Events;
+
 using System.Configuration;
 
 namespace PuzzlesBot;
@@ -21,12 +27,22 @@ public class PuzzleRecord
 public class Program
 {
 	public DiscordSocketClient? client;
+	public static ILogger Logger { get; } = new LoggerConfiguration()
+		.MinimumLevel.Verbose()
+		.Enrich.FromLogContext()
+		.WriteTo.Console()
+		.CreateLogger();
+
 	public static void Main() => new Program().MainAsync().GetAwaiter().GetResult();
 
 	public async Task MainAsync() {
+		await Log("Main", "Configuring services...", LogSeverity.Info);
+
 		using ServiceProvider services = ConfigureServices();
 
 		client = services.GetRequiredService<DiscordSocketClient>();
+		client.Ready += OnClientReady;
+		client.Log += LogAsync;
 
 		await client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["DiscordToken"]);
 		await client.StartAsync();
@@ -43,7 +59,11 @@ public class Program
 		await Task.Delay(-1);
 	}
 
-	private static ServiceProvider ConfigureServices() {
+	private async Task OnClientReady() {
+		Console.WriteLine($"Client ready as {client?.CurrentUser.Username}#{client?.CurrentUser.Discriminator}!");
+	}
+
+	private ServiceProvider ConfigureServices() {
 		var Intents = GatewayIntents.AllUnprivileged;
 		Intents &= ~GatewayIntents.GuildScheduledEvents;
 		Intents &= ~GatewayIntents.GuildInvites;
@@ -70,10 +90,30 @@ public class Program
 		return Collection.BuildServiceProvider();
 	}
 
-	private static void SetupMongo(IServiceCollection Collection) {
+	private void SetupMongo(IServiceCollection Collection) {
 		Collection.AddSingleton(sp => {
 			IMongoClient dbClient = sp.GetRequiredService<IMongoClient>();
 			return dbClient.GetDatabase("puzzles_bot");
 		});
+	}
+
+	public static async Task LogAsync(LogMessage message) {
+		LogEventLevel severity = message.Severity switch {
+			LogSeverity.Critical => LogEventLevel.Fatal,
+			LogSeverity.Error => LogEventLevel.Error,
+			LogSeverity.Warning => LogEventLevel.Warning,
+			LogSeverity.Info => LogEventLevel.Information,
+			LogSeverity.Verbose => LogEventLevel.Verbose,
+			LogSeverity.Debug => LogEventLevel.Debug,
+			_ => LogEventLevel.Information
+		};
+
+		Logger.Write(severity, message.Exception, "[{Source}] {Message}", message.Source, message.Message);
+		await Task.CompletedTask;
+	}
+
+	public static async Task Log(string? source, string? message, LogSeverity severity = LogSeverity.Info, Exception? exception = null) {
+		var logMessage = new LogMessage(severity, source, message, exception);
+		await LogAsync(logMessage);
 	}
 }
