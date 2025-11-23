@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PuzzlesBot": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
