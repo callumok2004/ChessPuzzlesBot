@@ -2,10 +2,12 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-using MongoDB.Driver;
+using PuzzlesBot.Context;
 
 using Serilog;
 using Serilog.Events;
@@ -14,23 +16,12 @@ using System.Configuration;
 
 namespace PuzzlesBot;
 
-public class PuzzleRecord
-{
-#pragma warning disable CS8618
-	public string PuzzleId { get; set; }
-	public string FEN { get; set; }
-	public string Moves { get; set; }
-	public string Rating { get; set; }
-	public string GameUrl { get; set; }
-#pragma warning restore CS8618
-}
-
 public class Program
 {
 	public DiscordSocketClient? client;
 	public ServiceProvider? services;
 
-	public static ILogger Logger { get; } = new LoggerConfiguration()
+	public static Serilog.ILogger Logger { get; } = new LoggerConfiguration()
 		.MinimumLevel.Verbose()
 		.Enrich.FromLogContext()
 		.WriteTo.Console()
@@ -45,6 +36,9 @@ public class Program
 		await Log("Main", "Loading themes...");
 		BoardThemes.LoadAllThemes();
 
+		await Log("Main", "Init Interactions...");
+		await services.GetRequiredService<InteractionHandler>().InitializeAsync();
+
 		client = services.GetRequiredService<DiscordSocketClient>();
 		client.Ready += OnClientReady;
 		client.Log += LogAsync;
@@ -52,15 +46,6 @@ public class Program
 		await Log("Main", "Starting client...");
 		await client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["DiscordToken"]);
 		await client.StartAsync();
-
-		//var config = new CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) {
-		//	HasHeaderRecord = true,
-		//};
-		//using var reader = new StreamReader("data/puzzles.csv");
-		//using var csv = new CsvReader(reader, config);
-		//var records = csv.GetRecords<PuzzleRecord>().ToList();
-		//var random = new Random();
-		//var randomRecord = records[random.Next(records.Count)];
 
 		await Task.Delay(-1);
 	}
@@ -93,19 +78,15 @@ public class Program
 		IServiceCollection Collection = new ServiceCollection()
 			.AddSingleton(Client)
 			.AddSingleton(Interactions)
-			.AddSingleton<IMongoClient>(c => new MongoClient(ConfigurationManager.AppSettings["MongoURI"]))
+			.AddSingleton<InteractionHandler>()
+			.AddDbContext<PuzzlesBotContext>(ops => {
+				ops.UseMySql(ConfigurationManager.AppSettings["SqlConnectionString"], ServerVersion.Parse("5.7.25-mysql"));
+				ops.EnableDetailedErrors(true);
+				ops.LogTo(Logger.Information, LogLevel.Warning);
+			})
 			.AddHostedService<DailyPuzzleService>();
 
-		SetupMongo(Collection);
-
 		return Collection.BuildServiceProvider();
-	}
-
-	private void SetupMongo(IServiceCollection Collection) {
-		Collection.AddSingleton(sp => {
-			IMongoClient dbClient = sp.GetRequiredService<IMongoClient>();
-			return dbClient.GetDatabase("puzzles_bot");
-		});
 	}
 
 	public static async Task LogAsync(LogMessage message) {

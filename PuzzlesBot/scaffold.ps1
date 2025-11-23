@@ -1,0 +1,1 @@
+dotnet ef dbcontext scaffold "server=localhost;user=root;password=;database=puzzles_bot" MySql.EntityFrameworkCore -o Context --context-dir Context --context PuzzlesBotContext --no-pluralize --force --no-onconfiguring
