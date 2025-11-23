@@ -9,14 +9,12 @@ using MongoDB.Driver;
 namespace PuzzlesBot;
 
 public class InteractionHandler {
-	readonly InteractionService interactions;
-	readonly DiscordSocketClient client;
-	readonly IServiceProvider services;
+	internal readonly InteractionService interactions;
+	internal readonly DiscordSocketClient client;
 
 	public InteractionHandler(IServiceProvider _services) {
 		interactions = _services.GetRequiredService<InteractionService>();
 		client = _services.GetRequiredService<DiscordSocketClient>();
-		services = _services;
 
 		client.InteractionCreated += InteractionCreated;
 		interactions.InteractionExecuted += InteractionExecuted;

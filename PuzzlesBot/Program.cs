@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using MongoDB.Driver;
 
@@ -27,6 +28,8 @@ public class PuzzleRecord
 public class Program
 {
 	public DiscordSocketClient? client;
+	public ServiceProvider? services;
+
 	public static ILogger Logger { get; } = new LoggerConfiguration()
 		.MinimumLevel.Verbose()
 		.Enrich.FromLogContext()
@@ -36,14 +39,17 @@ public class Program
 	public static void Main() => new Program().MainAsync().GetAwaiter().GetResult();
 
 	public async Task MainAsync() {
-		await Log("Main", "Configuring services...", LogSeverity.Info);
+		await Log("Main", "Configuring services...");
+		services = ConfigureServices();
 
-		using ServiceProvider services = ConfigureServices();
+		await Log("Main", "Loading themes...");
+		BoardThemes.LoadAllThemes();
 
 		client = services.GetRequiredService<DiscordSocketClient>();
 		client.Ready += OnClientReady;
 		client.Log += LogAsync;
 
+		await Log("Main", "Starting client...");
 		await client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["DiscordToken"]);
 		await client.StartAsync();
 
@@ -60,7 +66,11 @@ public class Program
 	}
 
 	private async Task OnClientReady() {
-		Console.WriteLine($"Client ready as {client?.CurrentUser.Username}#{client?.CurrentUser.Discriminator}!");
+		await Log("Main", $"Client ready as {client!.CurrentUser.Username}#{client.CurrentUser.Discriminator}");
+
+		await Log("Main", "Starting hosted services...");
+		foreach (var hosted in services!.GetServices<IHostedService>())
+			await hosted.StartAsync(CancellationToken.None);
 	}
 
 	private ServiceProvider ConfigureServices() {
@@ -83,7 +93,8 @@ public class Program
 		IServiceCollection Collection = new ServiceCollection()
 			.AddSingleton(Client)
 			.AddSingleton(Interactions)
-			.AddSingleton<IMongoClient>(c => new MongoClient(ConfigurationManager.AppSettings["MongoURI"]));
+			.AddSingleton<IMongoClient>(c => new MongoClient(ConfigurationManager.AppSettings["MongoURI"]))
+			.AddHostedService<DailyPuzzleService>();
 
 		SetupMongo(Collection);
 
