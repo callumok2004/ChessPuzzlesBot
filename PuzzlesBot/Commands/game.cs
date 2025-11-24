@@ -84,7 +84,7 @@ public partial class Interactions {
 		}
 		else {
 			var pMoves = puzzle.Moves.Split(' ');
-			var aMoves = string.IsNullOrEmpty(attempt.Moves) ? Array.Empty<string>() : attempt.Moves.Split(' ');
+			var aMoves = string.IsNullOrEmpty(attempt.Moves) ? [] : attempt.Moves.Split(' ');
 			if (aMoves.Length >= pMoves.Length - 1) {
 				await FollowupAsync("You have already completed today's puzzle!", ephemeral: true);
 				return;
@@ -92,7 +92,7 @@ public partial class Interactions {
 		}
 
 		var puzzleMoves = puzzle.Moves.Split(' ');
-		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? Array.Empty<string>() : attempt.Moves.Split(' ');
+		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? [] : attempt.Moves.Split(' ');
 
 		string currentFen = puzzle.Fen;
 		ChessBoard board = new(server.Theme ?? "default");
@@ -103,7 +103,7 @@ public partial class Interactions {
 		string lastMove = movesToApply.Last();
 
 		for (int i = 0; i < movesToApply.Count - 1; i++) {
-			currentFen = board.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
+			currentFen = ChessBoard.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
 		}
 
 		bool povWhite = !puzzle.Url.Contains("/black#");
@@ -151,7 +151,7 @@ public partial class Interactions {
 		}
 
 		var puzzleMoves = puzzle.Moves.Split(' ');
-		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? Array.Empty<string>() : attempt.Moves.Split(' ');
+		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? [] : attempt.Moves.Split(' ');
 
 		int expectedIndex = 1 + playedMoves.Length;
 		if (expectedIndex >= puzzleMoves.Length) {
@@ -168,7 +168,7 @@ public partial class Interactions {
 		movesToApply.AddRange(playedMoves);
 
 		foreach (var m in movesToApply) {
-			currentFen = board.ApplyFirstMoveToFen(currentFen, m);
+			currentFen = ChessBoard.ApplyFirstMoveToFen(currentFen, m);
 		}
 
 		string? uciMove = ChessUtils.SanToUci(moveInput, currentFen, expectedMove);
@@ -219,8 +219,7 @@ public partial class Interactions {
 
 			await FollowupAsync("Puzzle Solved! Great job!", ephemeral: true);
 
-			var channel = await Context.Client.GetChannelAsync((ulong)server.PuzzlesChannel!) as IMessageChannel;
-			if (channel != null)
+			if (await Context.Client.GetChannelAsync((ulong)server.PuzzlesChannel!) is IMessageChannel channel)
 				await channel.SendMessageAsync($"{Context.User.Mention} has just solved today's puzzle! 🎉");
 
 		}
@@ -234,7 +233,7 @@ public partial class Interactions {
 	private async Task SendPuzzleStateAsync(Puzzles puzzle, PuzzleAttemps attempt) {
 		var server = await db.Servers.FindAsync((long)Context.Guild.Id);
 		var puzzleMoves = puzzle.Moves.Split(' ');
-		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? Array.Empty<string>() : attempt.Moves.Split(' ');
+		var playedMoves = string.IsNullOrEmpty(attempt.Moves) ? [] : attempt.Moves.Split(' ');
 
 		string currentFen = puzzle.Fen;
 		ChessBoard board = new(server?.Theme ?? "default");
@@ -245,7 +244,7 @@ public partial class Interactions {
 		string lastMove = movesToApply.Last();
 
 		for (int i = 0; i < movesToApply.Count - 1; i++) {
-			currentFen = board.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
+			currentFen = ChessBoard.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
 		}
 
 		bool povWhite = !puzzle.Url.Contains("/black#");

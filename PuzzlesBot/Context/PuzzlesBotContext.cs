@@ -108,6 +108,10 @@ public partial class PuzzlesBotContext : DbContext
                 .HasDefaultValueSql("'NULL'")
                 .HasColumnType("bigint(20)")
                 .HasColumnName("puzzles_channel");
+            entity.Property(e => e.RoleId)
+                .HasDefaultValueSql("'NULL'")
+                .HasColumnType("bigint(20)")
+                .HasColumnName("role_id");
             entity.Property(e => e.Theme)
                 .HasMaxLength(255)
                 .HasDefaultValueSql("'''default'''")

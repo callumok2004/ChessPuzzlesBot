@@ -52,7 +52,7 @@ public class InteractionHandler {
 		}
 	}
 
-	public async Task InteractionExecuted(ICommandInfo commandInfo, IInteractionContext context, IResult result) {
+	public static async Task InteractionExecuted(ICommandInfo commandInfo, IInteractionContext context, IResult result) {
 		if (result.IsSuccess || context.Interaction.HasResponded) return;
 
 		EmbedBuilder enbed = new() {

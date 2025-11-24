@@ -56,7 +56,7 @@ public class Program
 		await dailyPuzzleService.RescheduleAllAsync();
 	}
 
-	private ServiceProvider ConfigureServices() {
+	private static ServiceProvider ConfigureServices() {
 		var Intents = GatewayIntents.AllUnprivileged;
 		Intents &= ~GatewayIntents.GuildScheduledEvents;
 		Intents &= ~GatewayIntents.GuildInvites;

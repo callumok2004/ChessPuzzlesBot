@@ -6,15 +6,10 @@ using PuzzlesBot.Context;
 
 namespace PuzzlesBot;
 
-public class DailyPuzzleService {
-	private readonly IServiceProvider _services;
-	private readonly DiscordSocketClient _client;
+public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient client) {
+	private readonly IServiceProvider _services = services;
+	private readonly DiscordSocketClient _client = client;
 	private readonly Dictionary<long, Timer> _timers = [];
-
-	public DailyPuzzleService(IServiceProvider services, DiscordSocketClient client) {
-		_services = services;
-		_client = client;
-	}
 
 	public async Task RescheduleAllAsync() {
 		var nowUtc = DateTime.UtcNow;
@@ -125,8 +120,7 @@ public class DailyPuzzleService {
 
 		if (server.PuzzlesChannel == null) return;
 
-		var channel = await _client.GetChannelAsync((ulong)server.PuzzlesChannel) as IMessageChannel;
-		if (channel == null) {
+		if (await _client.GetChannelAsync((ulong)server.PuzzlesChannel) is not IMessageChannel channel) {
 			await Program.Log("Daily Puzzle", $"Channel {server.PuzzlesChannel} not found for guild {server.ServerId}", LogSeverity.Warning);
 			return;
 		}
@@ -162,7 +156,11 @@ public class DailyPuzzleService {
 			ImageUrl = "attachment://board.png"
 		};
 
-		IUserMessage message = await channel.SendFileAsync(boardStream, "board.png", embed: embed.Build());
+		string? content = null;
+		if (server.RoleId != null)
+			content = $"<@&{server.RoleId}>";
+
+		IUserMessage message = await channel.SendFileAsync(boardStream, "board.png", embed: embed.Build(), text: content);
 
 		var puzzle = new Puzzles {
 			PuzzleId = randomRecord.PuzzleId,

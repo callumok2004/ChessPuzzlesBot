@@ -79,7 +79,7 @@ public class ChessBoard
 		return stream;
 	}
 
-	public string ApplyFirstMoveToFen(string fen, string firstMove) {
+	public static string ApplyFirstMoveToFen(string fen, string firstMove) {
 		string from = firstMove[..2];
 		string to = firstMove.Substring(2, 2);
 		char? promoPiece = firstMove.Length >= 5 ? firstMove[4] : null;
@@ -205,7 +205,7 @@ public class ChessBoard
 	}
 
 
-	private void DrawHighlight(Image<Rgba32> canvas, string square, int size, bool povWhite) {
+	private static void DrawHighlight(Image<Rgba32> canvas, string square, int size, bool povWhite) {
 		int file = square[0] - 'a';
 		int rank = 8 - (square[1] - '0');
 		int viewRank = povWhite ? rank : 7 - rank;

@@ -18,4 +18,6 @@ public partial class Servers
     public DateTime? LastRun { get; set; }
 
     public int? CurrentPuzzleId { get; set; }
+
+    public long? RoleId { get; set; }
 }
