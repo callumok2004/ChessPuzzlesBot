@@ -1,0 +1,45 @@
+name: .NET
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+
+    - name: Publish
+      run: dotnet publish -c Release -o release -r linux-arm64 --self-contained true
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Application_Artifact
+        path: release/
+
+    - name: Commit release
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: release-linux
+        FOLDER: release
