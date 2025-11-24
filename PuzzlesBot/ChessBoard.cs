@@ -28,7 +28,7 @@ public class ChessBoard
 		string[] ranks = fen.Split(' ')[0].Split('/');
 		int size = 100;
 		int margin = 25;
-		Image<Rgba32> board = new Image<Rgba32>(size * 8 + margin, size * 8 + margin);
+		Image<Rgba32> board = new(size * 8 + margin, size * 8 + margin);
 
 		for (int rank = 0; rank < 8; rank++) {
 			int file = 0;
@@ -79,7 +79,7 @@ public class ChessBoard
 		return stream;
 	}
 
-	private string ApplyFirstMoveToFen(string fen, string firstMove) {
+	public string ApplyFirstMoveToFen(string fen, string firstMove) {
 		string from = firstMove[..2];
 		string to = firstMove.Substring(2, 2);
 		char? promoPiece = firstMove.Length >= 5 ? firstMove[4] : null;
@@ -107,6 +107,11 @@ public class ChessBoard
 		}
 
 		fenParts[0] = ArrayToFen(boardArray);
+
+		if (fenParts.Length > 1) {
+			fenParts[1] = fenParts[1] == "w" ? "b" : "w";
+		}
+
 		return string.Join(' ', fenParts);
 	}
 
@@ -189,11 +194,6 @@ public class ChessBoard
 			float xRank = margin / 2f;
 			float yRank = i * size + margin;
 
-			if (!povWhite) {
-				xFile = (7 - i) * size + margin;
-				yRank = (7 - i) * size + margin;
-			}
-
 			img.Mutate(c =>
 			{
 				c.DrawText(files[i].ToString(), font, shadowColor, new PointF(xFile + 1, yFile + 1));
@@ -222,7 +222,7 @@ public class ChessBoard
 public static class BoardThemes
 {
 	private static readonly string[] pieces = ["P", "N", "B", "R", "Q", "K"];
-	private static readonly List<string> ThemesAvailable = [];
+	public static readonly List<string> ThemesAvailable = [];
 	private const string ThemesDir = "data/assets/themes";
 
 	public static void LoadTheme(string theme) {

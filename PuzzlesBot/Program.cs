@@ -4,8 +4,6 @@ using Discord.WebSocket;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 using PuzzlesBot.Context;
 
@@ -53,9 +51,9 @@ public class Program
 	private async Task OnClientReady() {
 		await Log("Main", $"Client ready as {client!.CurrentUser.Username}#{client.CurrentUser.Discriminator}");
 
-		await Log("Main", "Starting hosted services...");
-		foreach (var hosted in services!.GetServices<IHostedService>())
-			await hosted.StartAsync(CancellationToken.None);
+		await Log("Main", "Scheduling daily puzzles...");
+		var dailyPuzzleService = services!.GetRequiredService<DailyPuzzleService>();
+		await dailyPuzzleService.RescheduleAllAsync();
 	}
 
 	private ServiceProvider ConfigureServices() {
@@ -79,12 +77,12 @@ public class Program
 			.AddSingleton(Client)
 			.AddSingleton(Interactions)
 			.AddSingleton<InteractionHandler>()
+			.AddSingleton<DailyPuzzleService>()
 			.AddDbContext<PuzzlesBotContext>(ops => {
 				ops.UseMySql(ConfigurationManager.AppSettings["SqlConnectionString"], ServerVersion.Parse("5.7.25-mysql"));
-				ops.EnableDetailedErrors(true);
-				ops.LogTo(Logger.Information, LogLevel.Warning);
-			})
-			.AddHostedService<DailyPuzzleService>();
+				//ops.EnableDetailedErrors(true);
+				//ops.LogTo(Logger.Information, LogLevel.Warning);
+			});
 
 		return Collection.BuildServiceProvider();
 	}

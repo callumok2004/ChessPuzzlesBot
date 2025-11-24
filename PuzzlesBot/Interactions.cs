@@ -67,6 +67,10 @@ public class InteractionHandler {
 public class InteractionsBase(IServiceProvider services) : InteractionModuleBase {
 	public readonly InteractionService interactions = services.GetRequiredService<InteractionService>();
 	public readonly PuzzlesBotContext db = services.GetRequiredService<PuzzlesBotContext>();
+	public readonly DailyPuzzleService DailyPuzzleService = services.GetRequiredService<DailyPuzzleService>();
 }
 
 public partial class Interactions(IServiceProvider services) : InteractionsBase(services) { }
+
+[Group("config", "configuration commands")]
+public partial class ConfigInteractions(IServiceProvider services) : InteractionsBase(services) { }
