@@ -2,9 +2,26 @@ using System.Text.RegularExpressions;
 
 namespace PuzzlesBot;
 
-public static class ChessUtils {
+public static partial class ChessUtils {
 	public static string? SanToUci(string san, string fen, string? expectedMove = null) {
 		san = san.Trim();
+
+		if (UCIReg().IsMatch(san)) {
+			var _board = ParseFen(fen);
+			int f1 = san[0] - 'a';
+			int r1 = 8 - (san[1] - '0');
+			string _targetSq = san.Substring(2, 2);
+			bool _isWhiteTurn = fen.Split(' ')[1] == "w";
+
+			char p = _board[r1, f1];
+			if (p == '.' || (_isWhiteTurn && char.IsLower(p)) || (!_isWhiteTurn && char.IsUpper(p)))
+				return null;
+
+			if (CanMove(_board, r1, f1, _targetSq, _isWhiteTurn))
+				return san;
+
+			return null;
+		}
 
 		if (san.Equals("O-O", StringComparison.OrdinalIgnoreCase) || san.Equals("0-0", StringComparison.OrdinalIgnoreCase)) return GetCastlingMove(fen, true);
 		if (san.Equals("O-O-O", StringComparison.OrdinalIgnoreCase) || san.Equals("0-0-0", StringComparison.OrdinalIgnoreCase)) return GetCastlingMove(fen, false);
@@ -101,7 +118,7 @@ public static class ChessUtils {
 		}
 
 		if (piece == 'K') {
-			return Math.Abs(dr) <= 1 && Math.Abs(df) <= 1;
+			return (Math.Abs(dr) <= 1 && Math.Abs(df) <= 1) || (dr == 0 && Math.Abs(df) == 2);
 		}
 
 		if (piece == 'P') {
@@ -116,4 +133,7 @@ public static class ChessUtils {
 
 		return false;
 	}
+
+	[GeneratedRegex(@"^[a-h][1-8][a-h][1-8][qrbn]?$")]
+	private static partial Regex UCIReg();
 }

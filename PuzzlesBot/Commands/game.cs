@@ -106,7 +106,7 @@ public partial class Interactions {
 			currentFen = ChessBoard.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
 		}
 
-		bool povWhite = !puzzle.Url.Contains("/black#");
+		bool povWhite = puzzle.Url.Contains("/black#");
 		using var stream = board.Render(currentFen, lastMove, povWhite);
 
 		var embed = new EmbedBuilder()
@@ -247,7 +247,7 @@ public partial class Interactions {
 			currentFen = ChessBoard.ApplyFirstMoveToFen(currentFen, movesToApply[i]);
 		}
 
-		bool povWhite = !puzzle.Url.Contains("/black#");
+		bool povWhite = puzzle.Url.Contains("/black#");
 		using var stream = board.Render(currentFen, lastMove, povWhite);
 
 		var embed = new EmbedBuilder()

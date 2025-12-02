@@ -140,7 +140,7 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		string theme = server.Theme ?? "default";
 		ChessBoard chessBoard = new(theme);
 
-		MemoryStream boardStream = chessBoard.Render(randomRecord.FEN, randomRecord.Moves.Split(' ')[0], !randomRecord.GameUrl.Contains("/black#"));
+		MemoryStream boardStream = chessBoard.Render(randomRecord.FEN, randomRecord.Moves.Split(' ')[0], randomRecord.GameUrl.Contains("/black#"));
 		boardStream.Position = 0;
 
 		long endTimestamp = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds();
