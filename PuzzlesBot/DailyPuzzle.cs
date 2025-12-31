@@ -189,7 +189,7 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		return previousPuzzleId.HasValue ? (await db.Puzzles.FindAsync(previousPuzzleId.Value))?.Fen : null;
 	}
 
-	public  async Task PostStatsForServer(long serverId, string fen) {
+	public async Task PostStatsForServer(long serverId, string fen) {
 		try {
 			using var scope = _services.CreateScope();
 			var db = scope.ServiceProvider.GetRequiredService<PuzzlesBotContext>();

@@ -270,33 +270,4 @@ public partial class Interactions {
 
 		await FollowupWithFileAsync(stream, "board.png", embed: embed.Build(), ephemeral: true);
 	}
-
-	[SlashCommand("testydstats", "Manually trigger posting of yesterday's puzzle stats")]
-	[RequireUserPermission(GuildPermission.Administrator)]
-	public async Task YesterdayStatsAsync() {
-		await DeferAsync(ephemeral: true);
-
-		var server = await db.Servers.FindAsync((long)Context.Guild.Id);
-		if (server == null || server.CurrentPuzzleId == null) {
-			await FollowupAsync("No puzzle available.", ephemeral: true);
-			return;
-		}
-
-		if (server.PuzzlesChannel == null) {
-			await FollowupAsync("Puzzle channel not set.", ephemeral: true);
-			return;
-		}
-
-		var previousPuzzle = await db.Puzzles
-			.Where(p => p.Id < server.CurrentPuzzleId)
-			.OrderByDescending(p => p.Id)
-			.FirstOrDefaultAsync();
-
-		if (previousPuzzle == null) {
-			await FollowupAsync("No previous puzzle found.", ephemeral: true);
-			return;
-		}
-
-		await DailyPuzzleService.PostStatsForServer((long)Context.Guild.Id, previousPuzzle.Fen);
-	}
 }
