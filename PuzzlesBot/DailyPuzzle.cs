@@ -1,7 +1,9 @@
 ﻿using Discord;
 using Discord.WebSocket;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using PuzzlesBot.Context;
 
 namespace PuzzlesBot;
@@ -179,17 +181,27 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 
 		server.CurrentPuzzleId = puzzle.Id;
 
-		if (previousPuzzleId != null) {
-			var previousPuzzle = await db.Puzzles.FindAsync(previousPuzzleId.Value);
-			if (previousPuzzle != null) {
-				var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzleId.Value).ToListAsync();
-				int totalAttempts = attempts.Count;
-				if (totalAttempts == 0) return;
-				int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
-				double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
-				string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
-				await channel.SendMessageAsync(statsMessage);
+
+
+		_ = new Timer(async _ => {
+			if (previousPuzzleId != null) {
+				var previousPuzzle = await db.Puzzles.FindAsync(previousPuzzleId.Value);
+				if (previousPuzzle != null) {
+					var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzleId.Value).ToListAsync();
+					int totalAttempts = attempts.Count;
+					if (totalAttempts == 0) return;
+					int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
+					double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
+					string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
+					EmbedBuilder emb = new() {
+						Title = "Daily Puzzle - Yesterday's Results",
+						Description = statsMessage,
+						Color = Color.Green,
+						Timestamp = DateTimeOffset.UtcNow
+					};
+					await channel.SendMessageAsync(embed: emb.Build());
+				}
 			}
-		}
+		}, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
 	}
 }
