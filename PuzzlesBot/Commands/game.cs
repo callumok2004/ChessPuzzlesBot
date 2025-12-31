@@ -297,24 +297,6 @@ public partial class Interactions {
 			return;
 		}
 
-		var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzle.Id).ToListAsync();
-		int totalAttempts = attempts.Count;
-		int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
-		double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
-		string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
-
-		EmbedBuilder emb = new() {
-			Title = "Daily Puzzle - Yesterday's Results",
-			Description = statsMessage,
-			Color = Color.Green,
-			Timestamp = DateTimeOffset.UtcNow
-		};
-
-		if (await Context.Client.GetChannelAsync((ulong)server.PuzzlesChannel) is IMessageChannel channel) {
-			await channel.SendMessageAsync(embed: emb.Build());
-			await FollowupAsync("Stats posted!", ephemeral: true);
-		} else {
-			await FollowupAsync("Could not find the puzzle channel.", ephemeral: true);
-		}
+		await DailyPuzzleService.PostStatsForServer((long)Context.Guild.Id, previousPuzzle.Fen);
 	}
 }

@@ -71,7 +71,7 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 			var previousId = await RunDailyPuzzleForServer(server, db);
 			server.LastRun = nowUtc;
 			nextRunUtc = nextRunUtc.AddDays(1);
-			if (previousId != null) await PostStatsForServer(server.ServerId, previousId.Value);
+			if (previousId != null) await PostStatsForServer(server.ServerId, previousId);
 		}
 
 		var due = nextRunUtc - nowUtc;
@@ -96,7 +96,7 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 			server.LastRun = nowUtc;
 			await db.SaveChangesAsync();
 
-			if (previousId != null) await PostStatsForServer(serverId, previousId.Value);
+			if (previousId != null) await PostStatsForServer(serverId, previousId);
 
 			await RescheduleServerInternalAsync(server, nowUtc, db);
 		}
@@ -117,12 +117,12 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		server.LastRun = nowUtc;
 		await db.SaveChangesAsync();
 
-		if (previousId != null) await PostStatsForServer(serverId, previousId.Value);
+		if (previousId != null) await PostStatsForServer(serverId, previousId);
 
 		await RescheduleServerInternalAsync(server, nowUtc, db);
 	}
 
-	private async Task<int?> RunDailyPuzzleForServer(Servers server, PuzzlesBotContext db) {
+	private async Task<string?> RunDailyPuzzleForServer(Servers server, PuzzlesBotContext db) {
 		await Program.Log("Daily Puzzle", $"Running for guild {server.ServerId}", LogSeverity.Info);
 
 		if (server.PuzzlesChannel == null) return null;
@@ -186,10 +186,10 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 
 		server.CurrentPuzzleId = puzzle.Id;
 
-		return previousPuzzleId;
+		return previousPuzzleId.HasValue ? (await db.Puzzles.FindAsync(previousPuzzleId.Value))?.Fen : null;
 	}
 
-	private async Task PostStatsForServer(long serverId, int puzzleId) {
+	public  async Task PostStatsForServer(long serverId, string fen) {
 		try {
 			using var scope = _services.CreateScope();
 			var db = scope.ServiceProvider.GetRequiredService<PuzzlesBotContext>();
@@ -198,14 +198,14 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 
 			if (await _client.GetChannelAsync((ulong)server.PuzzlesChannel) is not IMessageChannel channel) return;
 
-			var puzzle = await db.Puzzles.FindAsync(puzzleId);
+			var puzzle = await db.Puzzles.FirstOrDefaultAsync(p => p.Fen == fen);
 			if (puzzle == null) return;
 
-			var attempts = await db.PuzzleAttemps.Where(a => a.Id == puzzleId).ToListAsync();
+			var attempts = await db.PuzzleAttemps.Where(a => a.Fen == fen).ToListAsync();
 			int totalAttempts = attempts.Count;
 			int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == puzzle.Moves.Split(' ').Length - 1);
 			double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
-			string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{puzzle.Url}>";
+			string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\n\nView the solution here: <{puzzle.Url}>";
 
 			EmbedBuilder emb = new() {
 				Title = "Daily Puzzle - Yesterday's Results",
