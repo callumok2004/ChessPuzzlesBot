@@ -183,8 +183,11 @@ public partial class Interactions {
 		if (moveInput != expectedMove) {
 			attempt.Failed = 1;
 			await db.SaveChangesAsync();
-			await FollowupAsync($"Incorrect move! You played {moveInput}, but failed.", ephemeral: true);
+			await FollowupAsync($"Incorrect move! You played {moveInput}, but that was incorrect. Better luck tomorrow!", ephemeral: true);
 			await SendPuzzleStateAsync(puzzle, attempt);
+
+			if (await Context.Client.GetChannelAsync((ulong)server.PuzzlesChannel!) is IMessageChannel channel)
+				await channel.SendMessageAsync($"Someone has just failed today's puzzle. ☹️");
 			return;
 		}
 

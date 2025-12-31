@@ -125,6 +125,8 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 			return;
 		}
 
+		int? previousPuzzleId = server.CurrentPuzzleId;
+
 		var records = Interactions.records;
 		if (records.Count == 0) return;
 
@@ -176,5 +178,18 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		await db.SaveChangesAsync();
 
 		server.CurrentPuzzleId = puzzle.Id;
+
+		if (previousPuzzleId != null) {
+			var previousPuzzle = await db.Puzzles.FindAsync(previousPuzzleId.Value);
+			if (previousPuzzle != null) {
+				var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzleId.Value).ToListAsync();
+				int totalAttempts = attempts.Count;
+				if (totalAttempts == 0) return;
+				int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
+				double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
+				string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it! {previousPuzzle.Url}";
+				await channel.SendMessageAsync(statsMessage);
+			}
+		}
 	}
 }
