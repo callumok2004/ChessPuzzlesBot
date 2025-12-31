@@ -187,7 +187,7 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 				if (totalAttempts == 0) return;
 				int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
 				double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
-				string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it! {previousPuzzle.Url}";
+				string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
 				await channel.SendMessageAsync(statsMessage);
 			}
 		}
