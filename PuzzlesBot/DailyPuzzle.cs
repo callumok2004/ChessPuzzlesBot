@@ -68,9 +68,10 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 
 		if (server.LastRun != null && (nowUtc - server.LastRun.Value).TotalHours >= 24 && nowUtc >= nextRunUtc) {
 			await Program.Log("Daily Puzzle", $"Server {server.ServerId} overdue, running immediately", LogSeverity.Debug);
-			await RunDailyPuzzleForServer(server, db);
+			var previousId = await RunDailyPuzzleForServer(server, db);
 			server.LastRun = nowUtc;
 			nextRunUtc = nextRunUtc.AddDays(1);
+			if (previousId != null) await PostStatsForServer(server.ServerId, previousId.Value);
 		}
 
 		var due = nextRunUtc - nowUtc;
@@ -91,9 +92,11 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 			if (server == null)
 				return;
 
-			await RunDailyPuzzleForServer(server, db);
+			var previousId = await RunDailyPuzzleForServer(server, db);
 			server.LastRun = nowUtc;
 			await db.SaveChangesAsync();
+
+			if (previousId != null) await PostStatsForServer(serverId, previousId.Value);
 
 			await RescheduleServerInternalAsync(server, nowUtc, db);
 		}
@@ -110,27 +113,29 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		if (server == null)
 			return;
 
-		await RunDailyPuzzleForServer(server, db);
+		var previousId = await RunDailyPuzzleForServer(server, db);
 		server.LastRun = nowUtc;
 		await db.SaveChangesAsync();
+
+		if (previousId != null) await PostStatsForServer(serverId, previousId.Value);
 
 		await RescheduleServerInternalAsync(server, nowUtc, db);
 	}
 
-	private async Task RunDailyPuzzleForServer(Servers server, PuzzlesBotContext db) {
+	private async Task<int?> RunDailyPuzzleForServer(Servers server, PuzzlesBotContext db) {
 		await Program.Log("Daily Puzzle", $"Running for guild {server.ServerId}", LogSeverity.Info);
 
-		if (server.PuzzlesChannel == null) return;
+		if (server.PuzzlesChannel == null) return null;
 
 		if (await _client.GetChannelAsync((ulong)server.PuzzlesChannel) is not IMessageChannel channel) {
 			await Program.Log("Daily Puzzle", $"Channel {server.PuzzlesChannel} not found for guild {server.ServerId}", LogSeverity.Warning);
-			return;
+			return null;
 		}
 
 		int? previousPuzzleId = server.CurrentPuzzleId;
 
 		var records = Interactions.records;
-		if (records.Count == 0) return;
+		if (records.Count == 0) return null;
 
 		var usedPuzzleIds = await db.Puzzles
 			.Select(p => p.PuzzleId)
@@ -181,27 +186,37 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 
 		server.CurrentPuzzleId = puzzle.Id;
 
+		return previousPuzzleId;
+	}
 
+	private async Task PostStatsForServer(long serverId, int puzzleId) {
+		try {
+			using var scope = _services.CreateScope();
+			var db = scope.ServiceProvider.GetRequiredService<PuzzlesBotContext>();
+			var server = await db.Servers.FirstOrDefaultAsync(s => s.ServerId == serverId);
+			if (server == null || server.PuzzlesChannel == null) return;
 
-		_ = new Timer(async _ => {
-			if (previousPuzzleId != null) {
-				var previousPuzzle = await db.Puzzles.FindAsync(previousPuzzleId.Value);
-				if (previousPuzzle != null) {
-					var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzleId.Value).ToListAsync();
-					int totalAttempts = attempts.Count;
-					if (totalAttempts == 0) return;
-					int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
-					double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
-					string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
-					EmbedBuilder emb = new() {
-						Title = "Daily Puzzle - Yesterday's Results",
-						Description = statsMessage,
-						Color = Color.Green,
-						Timestamp = DateTimeOffset.UtcNow
-					};
-					await channel.SendMessageAsync(embed: emb.Build());
-				}
-			}
-		}, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
+			if (await _client.GetChannelAsync((ulong)server.PuzzlesChannel) is not IMessageChannel channel) return;
+
+			var puzzle = await db.Puzzles.FindAsync(puzzleId);
+			if (puzzle == null) return;
+
+			var attempts = await db.PuzzleAttemps.Where(a => a.Id == puzzleId).ToListAsync();
+			int totalAttempts = attempts.Count;
+			int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == puzzle.Moves.Split(' ').Length - 1);
+			double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
+			string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{puzzle.Url}>";
+
+			EmbedBuilder emb = new() {
+				Title = "Daily Puzzle - Yesterday's Results",
+				Description = statsMessage,
+				Color = Color.Green,
+				Timestamp = DateTimeOffset.UtcNow
+			};
+			await channel.SendMessageAsync(embed: emb.Build());
+		}
+		catch (Exception ex) {
+			await Program.Log("Daily Puzzle", $"Error posting stats: {ex.Message}", LogSeverity.Error, ex);
+		}
 	}
 }

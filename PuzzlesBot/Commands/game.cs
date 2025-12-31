@@ -270,6 +270,51 @@ public partial class Interactions {
 
 		await FollowupWithFileAsync(stream, "board.png", embed: embed.Build(), ephemeral: true);
 	}
+
+	[SlashCommand("testydstats", "Manually trigger posting of yesterday's puzzle stats")]
+	[RequireUserPermission(GuildPermission.Administrator)]
+	public async Task YesterdayStatsAsync() {
+		await DeferAsync(ephemeral: true);
+
+		var server = await db.Servers.FindAsync((long)Context.Guild.Id);
+		if (server == null || server.CurrentPuzzleId == null) {
+			await FollowupAsync("No puzzle available.", ephemeral: true);
+			return;
+		}
+
+		if (server.PuzzlesChannel == null) {
+			await FollowupAsync("Puzzle channel not set.", ephemeral: true);
+			return;
+		}
+
+		var previousPuzzle = await db.Puzzles
+			.Where(p => p.Id < server.CurrentPuzzleId)
+			.OrderByDescending(p => p.Id)
+			.FirstOrDefaultAsync();
+
+		if (previousPuzzle == null) {
+			await FollowupAsync("No previous puzzle found.", ephemeral: true);
+			return;
+		}
+
+		var attempts = await db.PuzzleAttemps.Where(a => a.Id == previousPuzzle.Id).ToListAsync();
+		int totalAttempts = attempts.Count;
+		int successful = attempts.Count(a => a.Failed == 0 && a.Moves.Split(' ').Length == previousPuzzle.Moves.Split(' ').Length - 1);
+		double percentage = totalAttempts > 0 ? (double)successful / totalAttempts * 100 : 0;
+		string statsMessage = $"{totalAttempts} people attempted yesterday's puzzle and {percentage:F1}% ({successful}/{totalAttempts}) successfully solved it!\nView the solution here: <{previousPuzzle.Url}>";
+
+		EmbedBuilder emb = new() {
+			Title = "Daily Puzzle - Yesterday's Results",
+			Description = statsMessage,
+			Color = Color.Green,
+			Timestamp = DateTimeOffset.UtcNow
+		};
+
+		if (await Context.Client.GetChannelAsync((ulong)server.PuzzlesChannel) is IMessageChannel channel) {
+			await channel.SendMessageAsync(embed: emb.Build());
+			await FollowupAsync("Stats posted!", ephemeral: true);
+		} else {
+			await FollowupAsync("Could not find the puzzle channel.", ephemeral: true);
+		}
+	}
 }
-
-
