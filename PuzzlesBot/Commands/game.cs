@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -32,21 +33,24 @@ public partial class Interactions {
 	[RequireUserPermission(GuildPermission.Administrator)]
 	public async Task TestPuzzleAsync() {
 		await DeferAsync(ephemeral: true);
-
-		var server = await db.Servers.FindAsync((long)Context.Guild.Id);
-		if (server == null) {
-			server = new Servers { ServerId = (long)Context.Guild.Id };
-			db.Servers.Add(server);
-			await db.SaveChangesAsync();
+		if (Context.User is SocketGuildUser user && user.GuildPermissions.Administrator) {
+			var server = await db.Servers.FindAsync((long)Context.Guild.Id);
+			if (server == null) {
+				server = new Servers { ServerId = (long)Context.Guild.Id };
+				db.Servers.Add(server);
+				await db.SaveChangesAsync();
+			}
+	
+			if (server.PuzzlesChannel == null) {
+				await FollowupAsync("Please set a puzzle channel first using `/setchannel`.", ephemeral: true);
+				return;
+			}
+	
+			await DailyPuzzleService.TriggerDailyPuzzleNow((long)Context.Guild.Id);
+			await FollowupAsync("Daily puzzle triggered!", ephemeral: true);
+		} else {
+			await FollowupAsync("nope", ephemeral: true);
 		}
-
-		if (server.PuzzlesChannel == null) {
-			await FollowupAsync("Please set a puzzle channel first using `/setchannel`.", ephemeral: true);
-			return;
-		}
-
-		await DailyPuzzleService.TriggerDailyPuzzleNow((long)Context.Guild.Id);
-		await FollowupAsync("Daily puzzle triggered!", ephemeral: true);
 	}
 
 	[SlashCommand("play", "Start the daily puzzle")]
