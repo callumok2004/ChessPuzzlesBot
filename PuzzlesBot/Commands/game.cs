@@ -29,29 +29,29 @@ public partial class Interactions {
 	static CsvReader CSVReader => new(CSVStreamReader, CSVConfig);
 	public static readonly List<PuzzleRecord> records = [.. CSVReader.GetRecords<PuzzleRecord>()];
 
-	[SlashCommand("testpuzzle", "Force a new daily puzzle")]
-	[RequireUserPermission(GuildPermission.Administrator)]
-	public async Task TestPuzzleAsync() {
-		await DeferAsync(ephemeral: true);
-		if (Context.User is SocketGuildUser user && user.GuildPermissions.Administrator) {
-			var server = await db.Servers.FindAsync((long)Context.Guild.Id);
-			if (server == null) {
-				server = new Servers { ServerId = (long)Context.Guild.Id };
-				db.Servers.Add(server);
-				await db.SaveChangesAsync();
-			}
+	// [SlashCommand("testpuzzle", "Force a new daily puzzle")]
+	// [RequireUserPermission(GuildPermission.Administrator)]
+	// public async Task TestPuzzleAsync() {
+	// 	await DeferAsync(ephemeral: true);
+	// 	if (Context.User is SocketGuildUser user && user.GuildPermissions.Administrator) {
+	// 		var server = await db.Servers.FindAsync((long)Context.Guild.Id);
+	// 		if (server == null) {
+	// 			server = new Servers { ServerId = (long)Context.Guild.Id };
+	// 			db.Servers.Add(server);
+	// 			await db.SaveChangesAsync();
+	// 		}
 	
-			if (server.PuzzlesChannel == null) {
-				await FollowupAsync("Please set a puzzle channel first using `/setchannel`.", ephemeral: true);
-				return;
-			}
+	// 		if (server.PuzzlesChannel == null) {
+	// 			await FollowupAsync("Please set a puzzle channel first using `/setchannel`.", ephemeral: true);
+	// 			return;
+	// 		}
 	
-			await DailyPuzzleService.TriggerDailyPuzzleNow((long)Context.Guild.Id);
-			await FollowupAsync("Daily puzzle triggered!", ephemeral: true);
-		} else {
-			await FollowupAsync("nope", ephemeral: true);
-		}
-	}
+	// 		await DailyPuzzleService.TriggerDailyPuzzleNow((long)Context.Guild.Id);
+	// 		await FollowupAsync("Daily puzzle triggered!", ephemeral: true);
+	// 	} else {
+	// 		await FollowupAsync("nope", ephemeral: true);
+	// 	}
+	// }
 
 	[SlashCommand("play", "Start the daily puzzle")]
 	public async Task PlayPuzzleAsync() {
