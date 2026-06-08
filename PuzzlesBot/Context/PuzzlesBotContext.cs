@@ -13,6 +13,8 @@ public partial class PuzzlesBotContext : DbContext
 
     public virtual DbSet<PuzzleAttemps> PuzzleAttemps { get; set; }
 
+    public virtual DbSet<PuzzleResults> PuzzleResults { get; set; }
+
     public virtual DbSet<Puzzles> Puzzles { get; set; }
 
     public virtual DbSet<Servers> Servers { get; set; }
@@ -45,6 +47,30 @@ public partial class PuzzlesBotContext : DbContext
             entity.Property(e => e.Moves)
                 .HasMaxLength(255)
                 .HasColumnName("moves");
+        });
+
+        modelBuilder.Entity<PuzzleResults>(entity =>
+        {
+            entity.HasKey(e => new { e.ServerId, e.UserId, e.PuzzleId }).HasName("PRIMARY");
+
+            entity.ToTable("puzzle_results");
+
+            entity.HasIndex(e => new { e.ServerId, e.CreatedAt }, "ix_server_created");
+
+            entity.Property(e => e.ServerId)
+                .HasColumnType("bigint(20)")
+                .HasColumnName("server_id");
+            entity.Property(e => e.UserId)
+                .HasColumnType("bigint(20)")
+                .HasColumnName("user_id");
+            entity.Property(e => e.PuzzleId)
+                .HasColumnType("int(11)")
+                .HasColumnName("puzzle_id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("'current_timestamp()'")
+                .HasColumnType("timestamp")
+                .HasColumnName("created_at");
+            entity.Property(e => e.Solved).HasColumnName("solved");
         });
 
         modelBuilder.Entity<Puzzles>(entity =>

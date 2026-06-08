@@ -81,6 +81,15 @@ public partial class Interactions {
 				Failed = 0
 			};
 			db.PuzzleAttemps.Add(attempt);
+
+			if (await db.PuzzleResults.FindAsync((long)Context.Guild.Id, userId, puzzle.Id) == null) {
+				db.PuzzleResults.Add(new PuzzleResults {
+					ServerId = (long)Context.Guild.Id,
+					UserId = userId,
+					PuzzleId = puzzle.Id,
+					Solved = false
+				});
+			}
 		}
 		else if (attempt.Failed == 1) {
 			await FollowupAsync("You have already attempted today's puzzle, come back tomorrow!", ephemeral: true);
@@ -222,6 +231,20 @@ public partial class Interactions {
 
 			userData.Streak++;
 			userData.LastCompleted = puzzle.Id;
+
+			var result = await db.PuzzleResults.FindAsync((long)Context.Guild.Id, userId, puzzle.Id);
+			if (result == null) {
+				db.PuzzleResults.Add(new PuzzleResults {
+					ServerId = (long)Context.Guild.Id,
+					UserId = userId,
+					PuzzleId = puzzle.Id,
+					Solved = true
+				});
+			}
+			else {
+				result.Solved = true;
+			}
+
 			await db.SaveChangesAsync();
 
 			await FollowupAsync("Puzzle Solved! Great job!", ephemeral: true);
