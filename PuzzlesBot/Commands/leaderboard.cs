@@ -69,6 +69,11 @@ public partial class Interactions {
 		[Description("Start date for a custom range (YYYY-MM-DD)")] string? from = null,
 		[Description("End date for a custom range (YYYY-MM-DD), defaults to now")] string? to = null
 	) {
+		if (Context.User is not SocketGuildUser user || !user.GuildPermissions.Administrator) {
+			await FollowupAsync("You do not have permission to run this command.", ephemeral: true);
+			return;
+		}
+
 		await DeferAsync();
 
 		var (ok, error, start, end) = ResolvePeriod(period, from, to);
