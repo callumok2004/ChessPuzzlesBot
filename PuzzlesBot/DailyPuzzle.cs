@@ -118,8 +118,6 @@ public class DailyPuzzleService(IServiceProvider services, DiscordSocketClient c
 		await db.SaveChangesAsync();
 
 		if (previousId != null) await PostStatsForServer(serverId, previousId);
-
-		await RescheduleServerInternalAsync(server, nowUtc, db);
 	}
 
 	private async Task<string?> RunDailyPuzzleForServer(Servers server, PuzzlesBotContext db) {
